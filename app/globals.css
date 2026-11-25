@@ -1,0 +1,96 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+input {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+html, body {
+  overscroll-behavior: none;
+  overflow: hidden;
+  height: 100%;
+}
+
+body {
+  font-family: "Do Hyeon", sans-serif;
+  color: #E2E8F0;
+  background-color: #0B1120;
+  background-image:
+    radial-gradient(ellipse at 50% -10%, rgba(6, 182, 212, 0.18), transparent 60%),
+    radial-gradient(ellipse at 100% 100%, rgba(59, 130, 246, 0.14), transparent 50%),
+    linear-gradient(rgba(6, 182, 212, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(6, 182, 212, 0.05) 1px, transparent 1px);
+  background-size: auto, auto, 32px 32px, 32px 32px;
+}
+
+/* 눌리는 버튼 */
+.btn-3d, .ctl-btn {
+  transition: transform 0.08s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.08s, filter 0.08s;
+}
+.btn-3d:active { transform: translateY(3px); }
+.ctl-btn:active { transform: scale(0.96); filter: brightness(1.35); }
+
+/* 테크토닉 네온 타이틀 */
+.neon-title {
+  color: #E0F7FF;
+  text-shadow:
+    0 0 4px #22D3EE,
+    0 0 12px #06B6D4,
+    0 0 28px #3B82F6,
+    0 3px 0 #1E3A8A;
+}
+
+/* ---- 시작 화면 히어로 애니메이션 ---- */
+.hero-belt { animation: heroBelt 0.6s linear infinite; }
+@keyframes heroBelt { to { stroke-dashoffset: -14; } }
+
+.hero-box { animation: heroBox 6.6s linear infinite; }
+@keyframes heroBox {
+  from { transform: translateX(-30px); }
+  to { transform: translateX(330px); }
+}
+
+.hero-laser { animation: heroLaser 1.6s ease-in-out infinite alternate; }
+@keyframes heroLaser {
+  from { transform: translateY(0); }
+  to { transform: translateY(52px); }
+}
+
+.hero-arm { animation: heroArm 3.2s ease-in-out infinite alternate; }
+@keyframes heroArm {
+  from { transform: rotate(-8deg); }
+  to { transform: rotate(10deg); }
+}
+.hero-forearm { animation: heroForearm 3.2s ease-in-out infinite alternate; }
+@keyframes heroForearm {
+  from { transform: rotate(-20deg); }
+  to { transform: rotate(25deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-belt, .hero-box, .hero-laser, .hero-arm, .hero-forearm, .animate-bob { animation: none; }
+}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #0F172A; }
+::-webkit-scrollbar-thumb { background: #155E75; border-radius: 10px; }
+
+/* 모바일 가로 모드 안내 (최소 지원: 세로 320×568) */
+.rotate-hint { display: none; }
+@media (orientation: landscape) and (max-height: 500px) {
+  .rotate-hint {
+    display: flex;
+    position: fixed; inset: 0; z-index: 100;
+    align-items: center; justify-content: center; flex-direction: column; gap: 8px;
+    background: #0B1120; color: #67E8F9; font-size: 20px; text-align: center;
+  }
+}

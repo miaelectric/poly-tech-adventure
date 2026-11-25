@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+
+<html lang="ko"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>가륜가원의 모험 - 계단 오르기</title>
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Google Web Fonts for Cute Game Typography -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Jua&amp;family=Dongle:wght@700&amp;family=Nunito:wght@700;800;900&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind Configuration -->
+<script data-purpose="tailwind-config">
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            jua: ['"Jua"', 'cursive', 'sans-serif'],
+            dongle: ['"Dongle"', 'sans-serif'],
+            nunito: ['"Nunito"', 'sans-serif']
+          },
+          colors: {
+            pastel: {
+              cream: '#FFF9E6',
+              yellow: '#FFE072',
+              deepYellow: '#F59E0B',
+              orange: '#FF8A3D',
+              coral: '#FF6B6B',
+              pink: '#FF8EAA',
+              softPink: '#FFE5EC',
+              sky: '#70D6FF',
+              softSky: '#EBF7FF',
+              mint: '#48CAE4',
+              grass: '#80ED99',
+              purple: '#BDB2FF'
+            }
+          },
+          boxShadow: {
+            'game-btn': '0 8px 0 #D97706, 0 14px 18px rgba(0,0,0,0.18)',
+            'game-btn-active': '0 2px 0 #B45309, 0 4px 6px rgba(0,0,0,0.15)',
+            'card-active': '0 8px 0 #F59E0B, 0 12px 20px rgba(245, 158, 11, 0.25)',
+            'card-locked': '0 6px 0 #E2E8F0, 0 10px 15px rgba(0,0,0,0.04)',
+            'top-bar': '0 4px 15px rgba(255, 170, 0, 0.25)',
+            'bubble': '0 6px 16px rgba(100, 116, 139, 0.12)'
+          },
+          keyframes: {
+            bounceGentle: {
+              '0%, 100%': { transform: 'translateY(0) scale(1)' },
+              '50%': { transform: 'translateY(-6px) scale(1.02)' }
+            },
+            jiggle: {
+              '0%, 100%': { transform: 'rotate(-2deg)' },
+              '50%': { transform: 'rotate(2deg)' }
+            },
+            floatCloud: {
+              '0%, 100%': { transform: 'translateX(0)' },
+              '50%': { transform: 'translateX(10px)' }
+            }
+          },
+          animation: {
+            'bounce-gentle': 'bounceGentle 2.2s infinite ease-in-out',
+            'jiggle': 'jiggle 1.8s infinite ease-in-out',
+            'float-cloud': 'floatCloud 4s ease-in-out infinite'
+          }
+        }
+      }
+    }
+  </script>
+<!-- Custom Styles for Extra Polish and Game Aesthetic -->
+<style data-purpose="custom-game-theme">
+    body {
+      font-family: 'Jua', 'Dongle', sans-serif;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    /* 3D push-down effect for game interactive elements */
+    .btn-3d {
+      transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .btn-3d:active {
+      transform: translateY(6px);
+    }
+    
+    /* Text stroke effect for cartoonish game feel */
+    .text-outline-title {
+      text-shadow: 
+        -2px -2px 0 #FFF,
+         2px -2px 0 #FFF,
+        -2px  2px 0 #FFF,
+         2px  2px 0 #FFF,
+         0px 5px 8px rgba(180, 83, 9, 0.35);
+    }
+
+    /* Custom cute scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #FFF9E6;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #FFD166;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-gradient-to-b from-[#FFF2A3] via-[#FFE28A] to-[#C9F0FF] flex justify-center items-center p-2 sm:p-4 text-slate-800 antialiased overflow-x-hidden selection:bg-pink-300">
+<!-- BEGIN: GameContainer -->
+<!-- Main canvas card formatted for mobile phone & responsive desktop view -->
+<main class="relative w-full max-w-[430px] min-h-[780px] bg-[#FFFBF0]/95 backdrop-blur-md rounded-[36px] border-4 border-amber-300/80 shadow-[0_20px_50px_rgba(235,160,30,0.22)] overflow-hidden flex flex-col justify-between p-4 sm:p-5 my-auto" data-purpose="game-wrapper">
+<!-- BEGIN: FloatingBackgroundDecors -->
+<div aria-hidden="true" class="absolute -top-6 -left-6 w-24 h-24 bg-white/40 rounded-full blur-xl pointer-events-none"></div>
+<div aria-hidden="true" class="absolute top-44 -right-8 w-28 h-28 bg-pastel-pink/20 rounded-full blur-lg pointer-events-none animate-float-cloud"></div>
+<div aria-hidden="true" class="absolute bottom-28 -left-8 w-24 h-24 bg-pastel-sky/30 rounded-full blur-md pointer-events-none"></div>
+<!-- Cute Clouds floating background -->
+<div aria-hidden="true" class="absolute top-2 left-6 text-white/50 text-3xl select-none animate-float-cloud">☁️</div>
+<div aria-hidden="true" class="absolute top-16 right-5 text-white/60 text-2xl select-none animate-pulse">✨</div>
+<div aria-hidden="true" class="absolute top-28 left-4 text-amber-300/60 text-lg select-none">🐾</div>
+<div aria-hidden="true" class="absolute top-40 right-8 text-amber-300/60 text-lg select-none">🐾</div>
+<!-- END: FloatingBackgroundDecors -->
+<!-- BEGIN: TopBar -->
+<nav class="relative z-10 flex items-center justify-between px-2 pt-1 pb-2" data-purpose="top-navigation">
+<!-- High Score Indicator / Trophy -->
+<div class="flex items-center gap-1.5 bg-white/90 border-2 border-amber-200 px-3 py-1.5 rounded-full shadow-sm">
+<span class="text-xl">🏆</span>
+<div class="flex flex-col">
+<span class="text-[11px] leading-tight text-amber-700 font-bold tracking-wider">최고 랭킹</span>
+<span class="text-sm font-extrabold text-amber-900 leading-none">13 계단</span>
+</div>
+</div>
+<!-- Quick Action Buttons: Sound & Settings -->
+<div class="flex items-center space-x-2">
+<button aria-label="사운드 토글" class="w-10 h-10 bg-white hover:bg-amber-50 active:scale-90 transition rounded-full border-2 border-amber-200 flex items-center justify-center text-lg shadow-sm" id="soundToggleBtn">
+          🔊
+        </button>
+<button aria-label="설정" class="w-10 h-10 bg-white hover:bg-amber-50 active:scale-90 transition rounded-full border-2 border-amber-200 flex items-center justify-center text-lg shadow-sm" id="helpModalBtn">
+          ⚙️
+        </button>
+</div>
+</nav>
+<!-- END: TopBar -->
+<!-- BEGIN: GameHeaderHero -->
+<header class="relative z-10 mt-1 text-center flex flex-col items-center" data-purpose="game-hero">
+<!-- Animated Cute Mascot/Stair Climbing Avatar -->
+<div class="relative w-28 h-24 mb-2 flex items-center justify-center">
+<!-- Floating stair steps behind character -->
+<div class="absolute bottom-2 left-4 w-7 h-4 bg-amber-400 rounded-md border-b-2 border-amber-600 shadow-sm rotate-2"></div>
+<div class="absolute bottom-6 left-10 w-8 h-4 bg-amber-400 rounded-md border-b-2 border-amber-600 shadow-sm -rotate-1"></div>
+<div class="absolute bottom-10 left-16 w-8 h-4 bg-amber-400 rounded-md border-b-2 border-amber-600 shadow-sm rotate-3"></div>
+<!-- Animated Running Hero Icon -->
+<div class="relative z-10 text-6xl animate-bounce-gentle filter drop-shadow-md select-none transform hover:scale-110 transition duration-300">
+          🏃💨
+        </div>
+</div>
+<!-- Main Game Title with Pop-up Jelly Aesthetic -->
+<h1 class="text-3xl sm:text-[34px] font-extrabold tracking-wide text-amber-500 text-outline-title drop-shadow-sm flex items-center gap-1.5 justify-center leading-none">
+<span>가륜가원의</span>
+<span class="text-orange-500 underline decoration-wavy decoration-amber-300">모험</span>
+</h1>
+<!-- Cute Subtitle Tagline -->
+<div class="mt-2.5 inline-flex items-center gap-1.5 px-3.5 py-1 bg-gradient-to-r from-amber-100 via-orange-100 to-amber-100 rounded-full border border-amber-200/70 shadow-sm">
+<span class="text-xs text-amber-800 font-medium">계단을 콩콩 올라 최고 기록에 도전하세요! ✨</span>
+</div>
+</header>
+<!-- END: GameHeaderHero -->
+<!-- BEGIN: MainContent -->
+<section class="relative z-10 flex-1 flex flex-col justify-start gap-3 mt-3" data-purpose="game-lobby-content">
+<!-- Nickname Input Card -->
+<div class="bg-white/80 border-2 border-amber-200/80 rounded-2xl p-3 shadow-bubble" data-purpose="nickname-section">
+<label class="block text-xs font-bold text-amber-900/80 mb-1.5 flex items-center justify-between" for="nicknameInput">
+<span class="flex items-center gap-1">🏷️ 닉네임 입력 <span class="text-[10px] text-amber-600 font-normal">(최대 10자)</span></span>
+<span class="text-[11px] font-semibold text-orange-500" id="nameCounter">2/10</span>
+</label>
+<div class="relative">
+<input class="w-full h-11 bg-amber-50/60 hover:bg-amber-50 border-2 border-amber-300 rounded-xl px-4 text-base font-bold text-amber-900 placeholder:text-amber-300 focus:outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-100 transition shadow-inner tracking-wide" id="nicknameInput" maxlength="10" placeholder="이름을 적어줘!" type="text" value="빵야"/>
+<button class="absolute right-2 top-1.5 h-8 px-2.5 bg-amber-200/80 hover:bg-amber-300 text-amber-900 font-bold rounded-lg text-xs flex items-center gap-1 active:scale-95 transition" id="randomNameBtn" title="랜덤 닉네임 생성" type="button">
+            🎲 랜덤
+          </button>
+</div>
+</div>
+<!-- Character Select Section -->
+<div class="flex flex-col gap-2" data-purpose="character-select-section">
+<div class="flex items-center justify-between px-1">
+<div class="flex items-center gap-1.5">
+<span class="text-sm font-extrabold text-amber-950">캐릭터 선택</span>
+<span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+</div>
+<div class="text-xs font-bold text-amber-800 bg-amber-100/90 px-2.5 py-0.5 rounded-full border border-amber-300/60">
+            내 최고 기록: <span class="text-orange-600 font-extrabold">13계단</span>
+</div>
+</div>
+<!-- 2x2 Character Selection Grid -->
+<div class="grid grid-cols-2 gap-2.5" id="characterList">
+<!-- Character 1: 아기 (Selected / Default) -->
+<div aria-pressed="true" class="char-card relative bg-gradient-to-b from-[#FFF5D6] to-[#FFE699] border-3 border-amber-400 rounded-2xl p-2.5 shadow-card-active cursor-pointer transform hover:scale-[1.02] active:scale-95 transition-all text-left group" data-char="baby" role="button" tabindex="0">
+<!-- '선택됨' Ribbon Badge -->
+<div class="absolute -top-2.5 -right-1 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-black text-[11px] px-2.5 py-0.5 rounded-full shadow-md border-2 border-white flex items-center gap-0.5 animate-bounce-gentle">
+<span>선택</span> ✨
+            </div>
+<div class="flex items-center gap-2 mb-1.5">
+<!-- Cute Baby SVG Avatar -->
+<div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-3xl shadow-sm border border-amber-200 group-hover:rotate-6 transition-transform">
+                👶
+              </div>
+<div>
+<h2 class="text-base font-extrabold text-amber-900 leading-tight">아기</h2>
+<span class="text-[10px] text-orange-600 font-bold bg-amber-200/80 px-1.5 py-0.2 rounded-md">기본 지급</span>
+</div>
+</div>
+<p class="text-[11px] text-amber-800 font-medium leading-snug">
+              귀여운 아기! 처음부터 선택 가능
+            </p>
+</div>
+<!-- Character 2: 가원 (Locked) -->
+<div aria-pressed="false" class="char-card relative bg-white/70 hover:bg-pink-50/80 border-2 border-slate-200/80 hover:border-pink-300 rounded-2xl p-2.5 shadow-card-locked cursor-pointer transform hover:scale-[1.02] active:scale-95 transition-all text-left group" data-char="gawon" data-unlock-req="30" role="button" tabindex="0">
+<div class="flex items-center gap-2 mb-1.5">
+<!-- Cute Gawon Girl Avatar -->
+<div class="w-12 h-12 bg-pink-100/70 rounded-2xl flex items-center justify-center text-3xl shadow-sm border border-pink-200/60 filter grayscale-[40%] group-hover:grayscale-0 transition">
+                👧
+              </div>
+<div>
+<h2 class="text-base font-extrabold text-slate-700 leading-tight group-hover:text-pink-600 transition">가원</h2>
+<span class="text-[10px] text-slate-400 font-semibold">동생</span>
+</div>
+</div>
+<p class="text-[11px] text-slate-500 font-medium flex items-center gap-1">
+<span>🔒</span> <span>30계단 달성 해금</span>
+</p>
+</div>
+<!-- Character 3: 가륜 (Locked) -->
+<div aria-pressed="false" class="char-card relative bg-white/70 hover:bg-sky-50/80 border-2 border-slate-200/80 hover:border-sky-300 rounded-2xl p-2.5 shadow-card-locked cursor-pointer transform hover:scale-[1.02] active:scale-95 transition-all text-left group" data-char="garyun" data-unlock-req="70" role="button" tabindex="0">
+<div class="flex items-center gap-2 mb-1.5">
+<!-- Cute Garyun Boy Avatar -->
+<div class="w-12 h-12 bg-sky-100/70 rounded-2xl flex items-center justify-center text-3xl shadow-sm border border-sky-200/60 filter grayscale-[40%] group-hover:grayscale-0 transition">
+                👦
+              </div>
+<div>
+<h2 class="text-base font-extrabold text-slate-700 leading-tight group-hover:text-sky-600 transition">가륜</h2>
+<span class="text-[10px] text-slate-400 font-semibold">오빠</span>
+</div>
+</div>
+<p class="text-[11px] text-slate-500 font-medium flex items-center gap-1">
+<span>🔒</span> <span>70계단 달성 해금</span>
+</p>
+</div>
+<!-- Character 4: 엄마 (Locked) -->
+<div aria-pressed="false" class="char-card relative bg-white/70 hover:bg-orange-50/80 border-2 border-slate-200/80 hover:border-orange-300 rounded-2xl p-2.5 shadow-card-locked cursor-pointer transform hover:scale-[1.02] active:scale-95 transition-all text-left group" data-char="mom" data-unlock-req="120" role="button" tabindex="0">
+<div class="flex items-center gap-2 mb-1.5">
+<!-- Cute Mom Avatar -->
+<div class="w-12 h-12 bg-amber-100/70 rounded-2xl flex items-center justify-center text-3xl shadow-sm border border-amber-200/60 filter grayscale-[40%] group-hover:grayscale-0 transition">
+                👩
+              </div>
+<div>
+<h2 class="text-base font-extrabold text-slate-700 leading-tight group-hover:text-amber-700 transition">엄마</h2>
+<span class="text-[10px] text-slate-400 font-semibold">최강 수호자</span>
+</div>
+</div>
+<p class="text-[11px] text-slate-500 font-medium flex items-center gap-1">
+<span>🔒</span> <span>120계단 달성 해금</span>
+</p>
+</div>
+</div>
+</div>
+<!-- Controls Guide Box (Mobile & PC Hybrid) -->
+<div class="bg-gradient-to-r from-amber-50/90 to-yellow-50/90 border-2 border-amber-200 rounded-2xl p-3 shadow-sm flex flex-col gap-2" data-purpose="instructions-container">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-1.5 text-xs font-black text-amber-900">
+<span class="text-base">🎮</span>
+<span>조작 방법 안내</span>
+</div>
+<span class="text-[10px] font-bold text-amber-700 bg-amber-200/70 px-2 py-0.5 rounded-full">PC &amp; 모바일 공용</span>
+</div>
+<!-- Two Column Control Hints -->
+<div class="grid grid-cols-2 gap-2 text-xs font-semibold text-slate-700">
+<!-- PC Controls -->
+<div class="bg-white/85 rounded-xl p-2 border border-amber-200/60 flex flex-col gap-1">
+<span class="text-[11px] font-bold text-amber-800 flex items-center gap-1">💻 PC 키보드</span>
+<div class="flex flex-col gap-0.5 text-[11px]">
+<div class="flex items-center justify-between">
+<span class="text-slate-500">왼쪽:</span>
+<span class="font-mono bg-slate-100 border border-slate-300 px-1.5 py-0.2 rounded text-slate-800 shadow-xs">← / A</span>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-slate-500">오른쪽:</span>
+<span class="font-mono bg-slate-100 border border-slate-300 px-1.5 py-0.2 rounded text-slate-800 shadow-xs">→ / D</span>
+</div>
+</div>
+</div>
+<!-- Mobile Controls -->
+<div class="bg-white/85 rounded-xl p-2 border border-amber-200/60 flex flex-col gap-1">
+<span class="text-[11px] font-bold text-amber-800 flex items-center gap-1">📱 모바일 터치</span>
+<div class="flex flex-col gap-0.5 text-[11px]">
+<div class="flex items-center justify-between">
+<span class="text-slate-500">화면 하단 버튼:</span>
+</div>
+<div class="flex items-center justify-center gap-2 pt-0.5">
+<span class="bg-sky-100 border border-sky-300 px-2 py-0.5 rounded-md text-sky-800 font-black shadow-xs">⬅️ 좌</span>
+<span class="bg-sky-100 border border-sky-300 px-2 py-0.5 rounded-md text-sky-800 font-black shadow-xs">➡️ 우</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- END: MainContent -->
+<!-- BEGIN: BottomCTA -->
+<footer class="relative z-10 pt-3 pb-1" data-purpose="game-start-action">
+<!-- Big Chunky 3D Start Button -->
+<button class="btn-3d w-full h-15 py-3.5 px-6 bg-gradient-to-b from-[#FFAE00] via-[#FF9200] to-[#E57600] rounded-2xl shadow-game-btn border-2 border-[#FFE885] active:shadow-game-btn-active text-white text-xl sm:text-2xl font-black tracking-wider flex items-center justify-center gap-2 transform transition-transform group" id="startGameBtn" type="button">
+<span class="text-2xl group-hover:scale-125 transition-transform">🎮</span>
+<span class="drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]">게임 시작 !</span>
+<span class="text-amber-200 text-lg group-hover:translate-x-1 transition-transform">🐾</span>
+</button>
+<!-- Soft Copyright / Version Info -->
+<p class="text-center text-[10px] text-amber-800/60 font-medium mt-2">
+        v1.0.4 · 방울방울 계단 오르기 가족 모험
+      </p>
+</footer>
+<!-- END: BottomCTA -->
+<!-- Cute Toast Message Pop-up for Locked Characters / Interactive feedback -->
+<div aria-live="polite" class="pointer-events-none fixed bottom-24 left-1/2 -translate-x-1/2 bg-slate-900/90 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg opacity-0 transition-opacity duration-200 z-50 flex items-center gap-1.5 whitespace-nowrap" id="toastMessage">
+<span>🔒</span>
+<span id="toastText">30계단을 달성해야 열려요!</span>
+</div>
+</main>
+<!-- END: GameContainer -->
+<!-- BEGIN: InteractiveHandlers -->
+<script data-purpose="character-selection-and-ui-interactions">
+    document.addEventListener('DOMContentLoaded', () => {
+      const charCards = document.querySelectorAll('.char-card');
+      const nicknameInput = document.getElementById('nicknameInput');
+      const nameCounter = document.getElementById('nameCounter');
+      const randomNameBtn = document.getElementById('randomNameBtn');
+      const startBtn = document.getElementById('startGameBtn');
+      const soundBtn = document.getElementById('soundToggleBtn');
+      const toast = document.getElementById('toastMessage');
+      const toastText = document.getElementById('toastText');
+
+      let soundEnabled = true;
+      let toastTimer = null;
+
+      // Show little toast bubble
+      function showToast(message) {
+        if (!toast || !toastText) return;
+        toastText.textContent = message;
+        toast.classList.remove('opacity-0');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          toast.classList.add('opacity-0');
+        }, 1800);
+      }
+
+      // Random Korean nickname pool
+      const cuteNicknames = ['빵야', '말랑콩', '모찌', '동글이', '계단대장', '뽀짝이', '통통이', '구름젤리', '총총이'];
+      randomNameBtn?.addEventListener('click', () => {
+        const currentName = nicknameInput.value;
+        const filtered = cuteNicknames.filter(n => n !== currentName);
+        const picked = filtered[Math.floor(Math.random() * filtered.length)];
+        nicknameInput.value = picked;
+        updateCharCounter();
+        // cute input feedback
+        nicknameInput.classList.add('ring-4', 'ring-orange-300');
+        setTimeout(() => nicknameInput.classList.remove('ring-4', 'ring-orange-300'), 250);
+      });
+
+      // Update char length counter
+      function updateCharCounter() {
+        if (!nicknameInput || !nameCounter) return;
+        nameCounter.textContent = `${nicknameInput.value.length}/10`;
+      }
+      nicknameInput?.addEventListener('input', updateCharCounter);
+
+      // Character selection logic
+      charCards.forEach(card => {
+        card.addEventListener('click', () => {
+          const charType = card.getAttribute('data-char');
+          const unlockReq = card.getAttribute('data-unlock-req');
+
+          if (charType !== 'baby') {
+            // Locked character warning
+            showToast(`🔒 ${unlockReq}계단을 먼저 달성해야 선택할 수 있어요!`);
+            // Cute wiggle effect
+            card.classList.add('animate-jiggle');
+            setTimeout(() => card.classList.remove('animate-jiggle'), 400);
+            return;
+          }
+
+          // Active Character styling
+          showToast('👶 귀여운 아기 캐릭터가 선택되었어요!');
+        });
+      });
+
+      // Sound toggle simple state
+      soundBtn?.addEventListener('click', () => {
+        soundEnabled = !soundEnabled;
+        soundBtn.textContent = soundEnabled ? '🔊' : '🔇';
+        showToast(soundEnabled ? '효과음 켜짐 🎵' : '효과음 꺼짐 🔇');
+      });
+
+      // Start Game Button action
+      startBtn?.addEventListener('click', () => {
+        const name = nicknameInput.value.trim() || '이름없음';
+        showToast(`🚀 '${name}' 님과 함께 계단 등반을 시작합니다!`);
+      });
+    });
+  </script>
+<!-- END: InteractiveHandlers -->
+</body></html>

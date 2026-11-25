@@ -1,0 +1,85 @@
+# TRD: 폴리의 테크 모험 (Poly's Tech Adventure)
+
+## 1. 시스템 아키텍처 및 기술 스택
+기존 검증된 풀스택 웹 게임 아키텍처를 그대로 승계하여 개발 속도와 안정성을 극대화합니다.
+- **Frontend:** Next.js 14+ (App Router), React, TypeScript, Tailwind CSS
+- **Rendering:** HTML5 Canvas API 또는 DOM 기반 고프레임 애니메이션 (60fps 유지)
+- **Backend:** Next.js Route Handlers (`app/api/scores/route.ts`)
+- **Database:** Neon Serverless Postgres (`@neondatabase/serverless`)
+- **Deployment:** Vercel
+
+## 2. 데이터베이스 설계 (Neon Postgres)
+기존 게임 데이터와 분리하기 위해 신규 테이블 `poly_tech_scores`를 생성하여 사용합니다.
+
+### Table: `poly_tech_scores`
+```sql
+CREATE TABLE IF NOT EXISTS poly_tech_scores (
+  id SERIAL PRIMARY KEY,
+  player_name VARCHAR(50) NOT NULL,
+  score INTEGER NOT NULL,
+  character_id VARCHAR(30) NOT NULL DEFAULT 'e_human',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_poly_tech_scores_score ON poly_tech_scores(score DESC);
+
+export type CharacterId =
+  | 'e_human'     // E조인간 (기본)
+  | 'lim_junga'   // 임정아 (20)
+  | 'park_jy'     // 박정용 (40)
+  | 'gil_wj'      // 길완제 (60)
+  | 'ahn_yh'      // 안영휘 (80)
+  | 'koo_bm';     // 구병모 (100)
+
+export interface CharacterSpec {
+  id: CharacterId;
+  name: string;
+  role: 'robot' | 'female_prof' | 'male_prof';
+  unlockScore: number;
+  skillName: string;
+  skillDescription: string;
+  themeColor: string;
+}
+
+3.2 해금 상태 저장 (Client Storage)
+브라우저 localStorage 키 poly_tech_best_score에 사용자의 최고 도달 섹터를 저장.
+
+bestScore >= character.unlockScore 조건 충족 시 캐릭터 선택 UI에서 잠금 해제(Unlock) 처리. (테스트 편의를 위해 개발 모드에서는 전체 해금 토글 지원 권장)
+
+3.3 스킬 엔진 로직 구현 명세 (hooks/useGameEngine.ts)
+E조인간 (e_human) - 프로토콜 안정화:
+
+기본 프레임당 에너지 감소량 decayRate에 0.9 가중치 적용 (decayRate * 0.9).
+
+임정아 (lim_junga) - 데이터 최적화:
+
+발판 생성 시 15% 확률로 hasDataChip: true 속성 부여. 해당 발판 도달 시 score += 2 보너스 가산.
+
+박정용 (park_jy) - 경로 예측 알고리즘:
+
+렌더링 레이어에서 현재 위치 기준 index + 1 ~ index + 5 발판 사이에 발광하는 점선(SVG/Canvas Line)으로 이동 경로 가이드 렌더링.
+
+길완제 (gil_wj) - 긴급 백업 시스템:
+
+게임 시작 시 hasShield = true 초기화.
+
+사용자의 입력 방향(TURN vs CLIMB)이 다음 발판 방향과 불일치할 때, hasShield === true이면 게임 오버를 취소하고 자동으로 올바른 방향으로 보정 이동한 뒤 hasShield = false로 전환 (실드 파괴 이펙트 출력).
+
+안영휘 (ahn_yh) - 하이퍼 부스트:
+
+연속 입력 카운터 combo 추적 (입력 간격 0.4초 이내 유지 시 증가).
+
+combo >= 15 도달 시 isFeverMode = true (3초간 유지). 피버 모드 중에는 어떤 버튼(좌/우)을 눌러도 자동으로 정답 방향으로 초고속 전진하며 에너지 감소 중지.
+
+구병모 (koo_bm) - 마스터 오버클럭:
+
+한 칸 이동 시 에너지 회복량 healAmount * 1.3 적용.
+
+퀴즈 게이트에서 오답 선택 시 패널티(시간 감소 또는 정지) 스킵 후 즉시 정상 진행.
+
+4. 스마트 물류 컨베이어 비주얼 구현 가이드
+발판(Node) 디자인: 단순 계단 블록 대신, 금속 프레임 + 내부 네온 스트립 + 방향 화살표(LED)가 표시된 스마트 물류 컨베이어 패드 형태로 스타일링.
+
+배경 레이어: 패럴랙스(Parallax) 스크롤을 적용하여 층수가 올라갈수록 1층 입출고장 → 자동화 분류 라인 → 고공 AGV 허브 → 중앙 AI 관제탑 순으로 배경 톤과 구조물이 변화하도록 구현.
+
+캐릭터 그래픽: 초기 MVP 단계에서는 각 캐릭터의 특징(로봇 바이저, 여교수/남교수 헤어스타일·안경·정장·소품)이 뚜렷하게 구분되는 고해상도 2D SVG 또는 픽셀/벡터 스프라이트로 컴포넌트화(components/CharacterAvatar.tsx)하여 렌더링.

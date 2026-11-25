@@ -1,0 +1,32 @@
+{
+  "name": "poly-tech-adventure",
+  "version": "2.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "node scripts/migrate.mjs --if-db && next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:migrate": "node scripts/migrate.mjs",
+    "env:pull": "npm run env:pull:dev && npm run env:pull:prod",
+    "env:pull:dev": "npx --yes vercel@latest env pull .env.local --environment=development --yes",
+    "env:pull:prod": "npx --yes vercel@latest env pull .env.prod.local --environment=production --yes"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^0.10.4",
+    "next": "^15.5.29",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "autoprefixer": "^10.0.1",
+    "eslint": "^8",
+    "eslint-config-next": "^15.5.29",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
+  }
+}
