@@ -83,3 +83,58 @@ combo >= 15 도달 시 isFeverMode = true (3초간 유지). 피버 모드 중에
 배경 레이어: 패럴랙스(Parallax) 스크롤을 적용하여 층수가 올라갈수록 1층 입출고장 → 자동화 분류 라인 → 고공 AGV 허브 → 중앙 AI 관제탑 순으로 배경 톤과 구조물이 변화하도록 구현.
 
 캐릭터 그래픽: 초기 MVP 단계에서는 각 캐릭터의 특징(로봇 바이저, 여교수/남교수 헤어스타일·안경·정장·소품)이 뚜렷하게 구분되는 고해상도 2D SVG 또는 픽셀/벡터 스프라이트로 컴포넌트화(components/CharacterAvatar.tsx)하여 렌더링.
+
+## 5. 랭킹 DB · API 명세
+
+### 5-1. 테이블 (`db/schema.sql`)
+다른 게임과 같은 DB를 써도 겹치지 않도록 `poly_tech_` 접두사를 사용한다. 여러 번 실행해도 안전(`IF NOT EXISTS`).
+
+| 테이블 | 컬럼 | 비고 |
+| :--- | :--- | :--- |
+| `poly_tech_games` | `game_id UUID PK`, `started_at TIMESTAMPTZ`, `submitted_at TIMESTAMPTZ NULL` | 게임 시작 시 발급, 제출 시각 기록 |
+| `poly_tech_scores` | `id`, `player_name`, `score`, `character_id`, `created_at`, `game_id UUID UNIQUE → poly_tech_games` | 한 게임당 기록 1개 |
+
+인덱스: `idx_poly_tech_scores_score (score DESC, created_at ASC, id ASC)`, `uq_poly_tech_scores_game_id`, `idx_poly_tech_games_started`.
+
+적용: `npm run db:schema`(개발, `.env.local`) / `npm run db:schema:prod`(운영, `.env.prod.local`) / Vercel 빌드 시 자동(`--if-db`).
+
+### 5-2. `POST /api/games`
+게임 시작 시 호출. 응답 `201 { "game_id": "<uuid v4>" }`. 저장소 미설정 시 503.
+
+### 5-3. `GET /api/scores` — 명예의 전당 TOP 20 (PRD S4)
+```sql
+SELECT id, player_name, score, character_id, created_at
+FROM poly_tech_scores
+ORDER BY score DESC, created_at ASC, id ASC
+LIMIT 20;
+```
+
+### 5-4. 플레이 시간 검증 (`lib/game_rules.js`)
+- 경과 시간 = DB 시계 `now() - started_at`
+- 최소 플레이 시간 = `max(1.5초, (score − 30) / 8 × 1초)` → 미달이면 `too_fast`
+- 발급 후 1시간 초과 → `expired`
+
+### 5-5. `POST /api/scores` 처리 순서
+요청: `{ game_id, player_name, character_id, score }`
+
+1. JSON 본문 파싱
+2. 형식 검증: `game_id`(UUID v4) · 이름 · 캐릭터 · 점수(1 이상 정수) — 화면과 같은 `lib/game_rules.js`
+3. 트랜잭션 시작 + `pg_advisory_xact_lock(hashtextextended('poly_tech:'||game_id, 0))`
+4. `game_id` 조회 (`FOR UPDATE`)
+5. 이미 제출된 게임인지 확인
+6. 플레이 시간 검증 (5-4)
+7. 점수 INSERT + `submitted_at` 기록
+8. 순위 계산(`score >=` 개수) 후 COMMIT
+
+| 코드 | error | 의미 |
+| :--- | :--- | :--- |
+| 201 | — | 등록 성공 `{ id, rank }` |
+| 400 | `invalid_json` / `invalid_game_id` / `invalid_player_name` / `invalid_character` / `invalid_score` | 입력 오류 |
+| 404 | `game_not_found` | 발급되지 않은 game_id |
+| 409 | `already_submitted` | 이미 기록이 등록된 게임 (유니크 인덱스 위반 포함) |
+| 410 | `expired` | game_id 발급 후 1시간 초과 |
+| 422 | `too_fast` | 플레이 시간 부족 |
+| 500 | `db_error` | DB 오류 |
+| 503 | `ranking_unavailable` | 운영 환경에 DATABASE_URL 없음 |
+
+모든 API 응답에 `Cache-Control: no-store`. DB 접근은 `lib/score_store.js` 한 곳에서만 한다(개발 모드 + DB 없음 → 메모리 저장소, 파일 저장 없음).

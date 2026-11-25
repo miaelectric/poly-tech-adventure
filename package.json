@@ -4,10 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/migrate.mjs --if-db && next build",
+    "build": "node scripts/apply_schema.mjs --if-db && next build",
     "start": "next start",
     "lint": "next lint",
-    "db:migrate": "node scripts/migrate.mjs",
+    "db:schema": "node scripts/apply_schema.mjs --env-file=.env.local",
+    "db:schema:prod": "node scripts/apply_schema.mjs --env-file=.env.prod.local",
     "env:pull": "npm run env:pull:dev && npm run env:pull:prod",
     "env:pull:dev": "npx --yes vercel@latest env pull .env.local --environment=development --yes",
     "env:pull:prod": "npx --yes vercel@latest env pull .env.prod.local --environment=production --yes"

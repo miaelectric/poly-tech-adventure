@@ -10,7 +10,7 @@ import {
 } from "@/lib/characters";
 import { isMuted, setMuted, sfx } from "@/lib/sound";
 import { KEYS, getInt, getItem, setItem } from "@/lib/storage";
-import { NICK_MAX, graphemes, validateNickname } from "@/lib/validation";
+import { NICK_MAX, graphemes, isValidScore, validateNickname } from "@/lib/game_rules";
 
 const GameCanvas = dynamic(() => import("@/components/GameCanvas"), { ssr: false });
 
@@ -38,10 +38,11 @@ async function postScore(body: object): Promise<Response> {
   return send();
 }
 
-function requestSession(): Promise<string | null> {
-  return fetch("/api/session", { method: "POST", signal: AbortSignal.timeout(API_TIMEOUT_MS) })
+/** 게임 시작: 서버가 발급한 game_id (플레이 시간 검증·중복 등록 방지용) */
+function requestGame(): Promise<string | null> {
+  return fetch("/api/games", { method: "POST", signal: AbortSignal.timeout(API_TIMEOUT_MS), cache: "no-store" })
     .then((r) => (r.ok ? r.json() : null))
-    .then((j: { token?: string } | null) => j?.token ?? null)
+    .then((j: { game_id?: string } | null) => j?.game_id ?? null)
     .catch(() => null);
 }
 
@@ -79,7 +80,7 @@ export default function Home() {
   const [toast, setToast] = useState("");
   const [jiggle, setJiggle] = useState<CharacterId | null>(null);
   const [inputFlash, setInputFlash] = useState(false);
-  const sessionRef = useRef<Promise<string | null>>(Promise.resolve(null));
+  const gameIdRef = useRef<Promise<string | null>>(Promise.resolve(null));
   const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const spec = getCharacter(selected);
@@ -111,7 +112,7 @@ export default function Home() {
   }, [refreshTop]);
 
   const startGame = () => {
-    sessionRef.current = requestSession(); // 시작 시각이 서명된 세션 토큰 (점수 검증용)
+    gameIdRef.current = requestGame(); // 게임마다 새 game_id
     setPrevBest(getInt(KEYS.best));
     setNewUnlocks([]);
     setGameKey((k) => k + 1);
@@ -165,9 +166,14 @@ export default function Home() {
   const saveScore = useCallback(async (score: number) => {
     setSaveState("saving");
     setSaveMsg("");
-    const token = await sessionRef.current;
+    const gameId = await gameIdRef.current;
+    if (!gameId) {
+      // game_id 발급 실패(서버 미설정·네트워크) → 같은 game_id로 재시도할 수 없으므로 저장 불가 안내
+      setSaveState("unavailable");
+      return;
+    }
     try {
-      const r = await postScore({ player_name: nickname, character_id: selected, score, token });
+      const r = await postScore({ game_id: gameId, player_name: nickname, character_id: selected, score });
       const j = await r.json().catch(() => ({}));
       if (r.status === 201) {
         setMyId(j.id ?? null);
@@ -193,7 +199,7 @@ export default function Home() {
     setMyRank(null);
     setBest(getInt(KEYS.best));
     setScreen("gameover");
-    if (score < 1) { setSaveState("skipped"); return; }
+    if (!isValidScore(score)) { setSaveState("skipped"); return; }
     void saveScore(score);
   }, [saveScore]);
 

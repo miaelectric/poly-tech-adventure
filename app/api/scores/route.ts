@@ -1,117 +1,72 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDb, hasDatabase } from "@/lib/db";
-import { verifyToken } from "@/lib/session-token";
+import { StoreUnavailableError, getTopScores, submitScore } from "@/lib/score_store";
+import { isValidGameId, isValidScore, validateNickname } from "@/lib/game_rules";
 import { isCharacterId } from "@/lib/characters";
-import { SESSION_MAX_AGE_MS, maxPlausibleScore, validateNickname } from "@/lib/validation";
 
-// 랭킹은 항상 최신 데이터 (캐시 동작을 명시)
+// 랭킹은 항상 최신 데이터
 export const dynamic = "force-dynamic";
 
-const TOP_N = 20;
-const MEMORY_CAP = 100;
+const NO_STORE = { "Cache-Control": "no-store" };
 
-/** poly_tech_scores 행 (docs/TRD.md §2) */
-type Score = {
-  id: number;
-  player_name: string;
-  score: number;
-  character_id: string;
-  created_at: string;
+function json(body: unknown, status = 200) {
+  return NextResponse.json(body, { status, headers: NO_STORE });
+}
+function err(status: number, error: string, message: string) {
+  return json({ error, message }, status);
+}
+
+/**
+ * 응답 코드 (docs/TRD.md §5.3)
+ * 201 등록 성공 · 400 입력 오류 · 404 game_id 없음 · 409 이미 제출됨
+ * 410 game_id 만료 · 422 플레이 시간 부족 · 500 DB 오류 · 503 저장소 미설정
+ */
+const REJECT: Record<string, [number, string]> = {
+  game_not_found: [404, "게임 세션을 찾을 수 없어요."],
+  already_submitted: [409, "이미 기록이 등록된 게임이에요."],
+  expired: [410, "게임 세션이 만료됐어요."],
+  too_fast: [422, "기록을 확인할 수 없어요."],
 };
 
-// 저장소 모드: db | memory(로컬 개발 전용) | unavailable(운영인데 DB 없음)
-type Mode = "db" | "memory" | "unavailable";
-function mode(): Mode {
-  if (hasDatabase()) return "db";
-  return process.env.NODE_ENV === "production" ? "unavailable" : "memory";
-}
-if (mode() === "unavailable") {
-  console.error("[scores] DATABASE_URL이 설정되지 않아 랭킹을 사용할 수 없습니다 (503 반환).");
-}
-
-// 메모리 모드: 서버리스 인스턴스 간 공유 안 됨 → 개발용으로만 사용
-const g = globalThis as unknown as { __polyTechScores?: Score[]; __polyTechSeq?: number };
-const memScores: Score[] = (g.__polyTechScores ??= []);
-g.__polyTechSeq = memScores.reduce((m, s) => Math.max(m, s.id), g.__polyTechSeq ?? 0);
-
-/** 점수 내림차순, 동점이면 먼저 달성(created_at, id 오름차순) */
-function compare(a: Score, b: Score) {
-  return b.score - a.score || a.created_at.localeCompare(b.created_at) || a.id - b.id;
-}
-
-function err(status: number, error: string, message: string) {
-  return NextResponse.json({ error, message }, { status, headers: { "Cache-Control": "no-store" } });
-}
-
+/** GET /api/scores : 명예의 전당 TOP 20 */
 export async function GET() {
   try {
-    const m = mode();
-    if (m === "unavailable") return err(503, "ranking_unavailable", "랭킹 서버가 설정되지 않았어요.");
-    if (m === "memory") {
-      return NextResponse.json([...memScores].sort(compare).slice(0, TOP_N), { headers: { "Cache-Control": "no-store" } });
-    }
-    const sql = getDb();
-    const rows = await sql`
-      SELECT id, player_name, score, character_id, created_at
-      FROM poly_tech_scores
-      ORDER BY score DESC, created_at ASC, id ASC
-      LIMIT ${TOP_N}
-    `;
-    return NextResponse.json(rows, { headers: { "Cache-Control": "no-store" } });
+    return json(await getTopScores());
   } catch (e) {
+    if (e instanceof StoreUnavailableError) return err(503, "ranking_unavailable", "랭킹 서버가 설정되지 않았어요.");
     console.error(e);
     return err(500, "db_error", "랭킹을 불러오지 못했어요.");
   }
 }
 
+/** POST /api/scores : 점수 등록 */
 export async function POST(req: NextRequest) {
+  // 1. 요청 본문 파싱
+  let body: Record<string, unknown>;
   try {
-    const m = mode();
-    if (m === "unavailable") return err(503, "ranking_unavailable", "랭킹 서버가 설정되지 않았어요.");
+    const parsed = await req.json();
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error();
+    body = parsed;
+  } catch {
+    return err(400, "invalid_json", "잘못된 요청이에요.");
+  }
 
-    let body: Record<string, unknown>;
-    try { body = await req.json(); } catch { return err(400, "invalid_json", "잘못된 요청이에요."); }
+  // 2. 입력 형식 검증 (lib/game_rules.js — 화면과 같은 규칙)
+  if (!isValidGameId(body.game_id)) return err(400, "invalid_game_id", "게임 세션 형식이 올바르지 않아요.");
+  const nick = validateNickname(body.player_name);
+  if (!nick.ok) return err(400, "invalid_player_name", nick.error);
+  if (!isCharacterId(body.character_id)) return err(400, "invalid_character", "알 수 없는 캐릭터예요.");
+  if (!isValidScore(body.score)) return err(400, "invalid_score", "1 섹터 이상만 기록할 수 있어요.");
 
-    // --- 입력 검증 ---
-    const nick = validateNickname(body.player_name);
-    if (!nick.ok) return err(400, "invalid_player_name", nick.error);
-    const character = body.character_id;
-    if (!isCharacterId(character)) return err(400, "invalid_character", "알 수 없는 캐릭터예요.");
-    const score = body.score;
-    if (typeof score !== "number" || !Number.isInteger(score) || score < 1) {
-      return err(400, "invalid_score", "1 섹터 이상만 기록할 수 있어요.");
-    }
-
-    // --- 세션 토큰 + 점수 타당성 ---
-    const startedAt = verifyToken(body.token);
-    if (startedAt === null) return err(403, "invalid_token", "게임 세션이 올바르지 않아요.");
-    const elapsed = Date.now() - startedAt;
-    if (elapsed < 0 || elapsed > SESSION_MAX_AGE_MS) return err(403, "expired_token", "게임 세션이 만료됐어요.");
-    if (score > maxPlausibleScore(elapsed)) return err(422, "implausible_score", "기록을 확인할 수 없어요.");
-
-    if (m === "memory") {
-      g.__polyTechSeq = (g.__polyTechSeq ?? 0) + 1;
-      const rec: Score = {
-        id: g.__polyTechSeq, player_name: nick.value, score, character_id: character,
-        created_at: new Date().toISOString(),
-      };
-      memScores.push(rec);
-      memScores.sort(compare);
-      const rank = memScores.indexOf(rec) + 1;
-      memScores.splice(MEMORY_CAP);
-      return NextResponse.json({ id: rec.id, rank }, { status: 201 });
-    }
-
-    const sql = getDb();
-    const inserted = await sql`
-      INSERT INTO poly_tech_scores (player_name, score, character_id)
-      VALUES (${nick.value}, ${score}, ${character})
-      RETURNING id
-    `;
-    // 새 기록은 동점자 중 가장 늦으므로, 자기보다 같거나 높은 기록 수 = 내 순위
-    const ranked = await sql`SELECT COUNT(*)::int AS rank FROM poly_tech_scores WHERE score >= ${score}`;
-    return NextResponse.json({ id: inserted[0].id, rank: ranked[0].rank }, { status: 201 });
+  // 3~8. 잠금 → game_id 확인 → 중복 확인 → 플레이 시간 검증 → 저장 → 순위 (lib/score_store.js)
+  try {
+    const r = await submitScore({
+      gameId: body.game_id, playerName: nick.value, characterId: body.character_id, score: body.score,
+    });
+    if (r.ok) return json({ id: r.id, rank: r.rank }, 201);
+    const [status, message] = REJECT[r.reason];
+    return err(status, r.reason, message);
   } catch (e) {
+    if (e instanceof StoreUnavailableError) return err(503, "ranking_unavailable", "랭킹 서버가 설정되지 않았어요.");
     console.error(e);
     return err(500, "db_error", "기록을 저장하지 못했어요.");
   }
