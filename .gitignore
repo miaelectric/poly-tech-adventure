@@ -6,8 +6,7 @@ node_modules
 out/
 
 # env (secrets): .env.local(개발 DB), .env.prod.local(운영 DB) 등 모든 .env 파일 제외, 예시 파일만 커밋
-.env
-.env.*
+.env*
 !.env.example
 
 # vercel link 정보
